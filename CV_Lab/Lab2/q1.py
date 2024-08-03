@@ -1,38 +1,41 @@
-import cv2
+
 import numpy as np
+import cv2
 
-def manual_histogram_equalization(image):
+def equalizeHistogram(img):
+    img_height = img.shape[0]
+    img_width = img.shape[1]
+    histogram = np.zeros([256], np.int32)
 
-        if len(image.shape) != 2:
-            raise ValueError("The input image must be grayscale")
+    for i in range(0, img_height):
+        for j in range(0, img_width):
+            histogram[img[i, j]] += 1
 
+    pdf_img = histogram / histogram.sum()
+    cdf = np.zeros([256], float)
 
-        hist = np.zeros(256, dtype=int)
-        for pixel_value in image.ravel():
-            hist[pixel_value] += 1
+    for i in range(0, 256):
+        for j in range(0, i + 1):
+            cdf[i] += pdf_img[j]
 
+    cdf = np.zeros(256, float)
+    cdf[0] = pdf_img[0]
+    for i in range(1, 256):
+        cdf[i] = cdf[i - 1] + pdf_img[i]
 
-        cdf = np.cumsum(hist)
-        cdf_normalized = cdf * 255 / cdf[-1]
+    cdf_eq = np.round(cdf * 255, 0)  # mapping, transformation function T(x)
+    imgEqualized = np.zeros((img_height, img_width))
 
+    for i in range(0, img_height):
+        for j in range(0, img_width):
+            r = img[i, j]
+            s = cdf_eq[r]
+            imgEqualized[i, j] = s
 
-        lookup_table = np.floor(cdf_normalized).astype(np.uint8)
+    return imgEqualized
 
-
-        equalized_image = lookup_table[image]
-
-        return equalized_image
-
-image = cv2.imread('sample.jpeg', cv2.IMREAD_GRAYSCALE)
-
-
-equalized_image = manual_histogram_equalization(image)
-
-
-cv2.imshow('Original Grayscale Image', image)
-cv2.imshow('Equalized Image', equalized_image)
-
-
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-
+img = cv2.imread('sample.jpeg',0)
+img_eq = equalizeHistogram(img)
+img_eq = img_eq.astype('uint8')
+cv2.imshow('Equalized', img_eq)
+cv2.waitKey()
